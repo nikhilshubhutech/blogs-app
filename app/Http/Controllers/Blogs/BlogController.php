@@ -18,7 +18,10 @@ class BlogController extends Controller
     {
         $blogs = Blog::with('category')->orderBy('created_at', 'desc')->paginate(12);
 
-        return view('pages.blogs.index', compact('blogs'));
+        return response()->json([
+            'status' => true,
+            'data' => $blogs,
+        ], 200);
     }
 
     /**
@@ -121,7 +124,12 @@ class BlogController extends Controller
             ? '✅ Blog post created successfully!'
             : '💾 Blog post updated successfully!';
 
-        return redirect()->route('blogs.index')->with('success', $message);
+        return response()->json([
+            'status' => true,
+            'message' => $message,
+            'data' => $blog,
+        ], $isCreating ? 201 : 200);
+
     }
 
     /**
@@ -129,15 +137,37 @@ class BlogController extends Controller
      */
     public function show($slug)
     {
-        $blog = Blog::where('slug', $slug)->with('category')->firstOrFail();
+        $blog = Blog::with('category')->where('slug', $slug)->first();
 
-        return view('pages.blogs._partials.blog-details', compact('blog'));
+        if (! $blog) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Blog not found.',
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => true,
+            'data' => $blog,
+        ], 200);
     }
 
     public function destroy($slug)
     {
-        $blog = Blog::where('slug', $slug)->firstOrFail();
+        $blog = Blog::where('slug', $slug)->first();
+
+        if (! $blog) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Blog not found.',
+            ], 404);
+        }
+
         $blog->delete();
-        return redirect()->route('blogs.index')->with('success', 'Blog deleted successfully!');
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Blog deleted successfully!',
+        ], 200);
     }
 }

@@ -20,7 +20,7 @@
                 <div>
                     <nav class="flex items-center gap-15 justify-between">
                         <a class="text-xl text-gray-600 hover:text-gray-900" href="/">Home</a>
-                        <a class="text-xl text-gray-600 hover:text-gray-900" href="/blogs">Blogs</a>
+                        <a class="text-xl text-gray-600 hover:text-gray-900" href="{{ route('blogs.index') }}">Blogs</a>
                         <a class="text-xl text-gray-600 hover:text-gray-900" href="/about">About</a>
                         <a class="text-xl text-gray-600 hover:text-gray-900" href="/contact">Contact</a>
                     </nav>

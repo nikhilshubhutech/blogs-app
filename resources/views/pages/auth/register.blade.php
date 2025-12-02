@@ -49,13 +49,11 @@ document.addEventListener('DOMContentLoaded', function () {
         ['name', 'email', 'password'].forEach(field => {
             document.getElementById(field + 'Error').innerText = '';
         });
-
         const data = {
             name: document.getElementById('name').value,
             email: document.getElementById('email').value,
             password: document.getElementById('password').value,
         };
-
         try {
             const response = await fetch('{{ route("registerPost") }}', {
                 method: 'POST',
@@ -70,7 +68,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (response.ok) {
                 sessionStorage.setItem('successMessage', result.message || 'Registration successful!');
-                window.location.href = result.redirect;
+                sessionStorage.setItem('verificationEmail', result.email);
+                window.location.href = "{{ route('verify.email.page') }}";
             } else if (response.status === 422) {
                 const errors = result.errors;
                 for (const field in errors) {

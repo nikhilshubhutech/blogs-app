@@ -4,204 +4,192 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UserRequest;
+use App\Mail\Auth\SendOtp;
+use App\Models\Email\EmailOtp;
 use App\Models\User;
-use App\Models\EmailOtp;
-use App\Mail\SendOtp;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 class AuthController extends Controller
 {
+    /**
+     * Register User + Send OTP
+     */
     public function register(UserRequest $request)
     {
-        try {
-            $validated = $request->validated();
+        $validated = $request->validated();
 
-            $user = User::create([
-                'name' => $validated['name'],
-                'email' => $validated['email'],
-                'password' => Hash::make($validated['password']),
-            ]);
-            if (EmailOtp::where('email', $request->email)
-                ->where('created_at', '>', now()->subMinute())
-                ->exists()) {
-                return response()->json([
-                    'message' => 'Please wait 1 minute before requesting a new OTP.',
-                ], 429);
-            }
-
-            $otp = rand(100000, 999999);
-            EmailOtp::create([
-                'email' => $request->email,
-                'otp' => $otp,
-                'expires_at' => now()->addMinutes(10),
-            ]);
-            Mail::to($request->email)->send(new SendOtp($otp));
-
-            return response()->json([
-                'status' => true,
-                'message' => 'Registration successful!',
-                'redirect' => route('login'),
-            ], 201);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Registration failed.',
-                'error' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    // public function login(Request $request)
-    // {
-    //     $credentials = $request->validate([
-    //         'email' => 'required|email',
-    //         'password' => 'required|string',
-    //     ]);
-
-    //     if (! $token = auth('api')->attempt($credentials)) {
-    //         return response()->json([
-    //             'status' => false,
-    //             'message' => 'Login Failed',
-    //             'errors' => [
-    //                 'email' => ['Invalid credentials'],
-    //             ],
-    //         ], 401);
-    //     }
-
-    //     return response()->json([
-    //         'status' => true,
-    //         'message' => 'Login successful!',
-    //         'token' => $token,
-    //         'redirect' => route('home'), // frontend will redirect
-    //     ], 200);
-    // }
-
-    public function login(Request $request)
-    {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required|string',
+        // Create user
+        $user = User::create([
+            'name'      => $validated['name'],
+            'email'     => $validated['email'],
+            'password'  => Hash::make($validated['password']),
         ]);
 
-        // Find user by email
-        $user = User::where('email', $request->email)->first();
+        // Generate OTP
+        $otp = random_int(100000, 999999);
 
-        if (! $user) {
+        // Remove old OTPs
+        EmailOtp::where('email', $user->email)->delete();
+
+        // Try to send email
+        try {
+            Mail::to($user->email)->send(new SendOtp($user->name, $otp));
+
+            EmailOtp::create([
+                'email'      => $user->email,
+                'otp'        => $otp,
+                'expires_at' => now()->addMinutes(10),
+            ]);
+        } catch (\Throwable $e) {
             return response()->json([
-                'status' => false,
-                'message' => 'Login Failed',
-                'errors' => [
-                    'email' => ['Email not found.'],
-                ],
-            ], 404);
+                'status'  => false,
+                'message' => 'Registration successful, but failed to send verification email.',
+                'error'   => $e->getMessage(),
+            ], 500);
         }
 
-        // Check password
-        if (! Hash::check($request->password, $user->password)) {
+        return response()->json([
+            'status'  => true,
+            'message' => 'Registration successful. OTP code sent to your email.',
+            'email'   => $user->email,
+        ], 201);
+    }
+
+    /**
+     * Login using JWT
+     */
+    public function login(Request $request)
+    {
+        $credentials = $request->validate([
+            'email'     => 'required|email',
+            'password'  => 'required|string',
+        ]);
+
+        // Attempt login with JWT
+        if (!$token = auth('api')->attempt($credentials)) {
             return response()->json([
-                'status' => false,
-                'message' => 'Login Failed',
-                'errors' => [
-                    'password' => ['Incorrect password.'],
-                ],
+                'status'  => false,
+                'message' => 'Login failed.',
+                'errors'  => [
+                    'email' => ['Invalid email or password.']
+                ]
             ], 401);
         }
 
-        // Login successful → create token
-        $token = auth('api')->login($user);
+        return $this->respondWithToken($token, 'Login successful.');
+    }
+
+
+    /**
+     * Logout (invalidate token)
+     */
+    public function logout()
+    {
+        auth('api')->logout();
 
         return response()->json([
-            'status' => true,
-            'message' => 'Login successful!',
-            'token' => $token,
-            'redirect' => route('home'),
+            'status'  => true,
+            'message' => 'Successfully logged out.',
         ], 200);
     }
 
-    // public function logout()
-    // {
-    //     auth('api')->logout();
 
-    //     return response()->json(['message' => 'Successfully logged out']);
-    // }
-
-    // public function refresh()
-    // {
-    //     return $this->respondWithToken(auth('api')->refresh());
-    // }
-
-    protected function respondWithToken($token)
+    /**
+     * Refresh JWT
+     */
+    public function refresh()
     {
-        return response()->json([
-            'access_token' => $token,
-            'token_type' => 'bearer',
-            'expires_in' => auth('api')->factory()->getTTL() * 60,
-        ]);
+        $newToken = auth('api')->refresh();
+
+        return $this->respondWithToken($newToken, 'Token refreshed.');
     }
 
-    public function verifyOtp(Request $request)
+
+    /**
+     * Return user info
+     */
+    public function me()
+    {
+        return response()->json([
+            'status' => true,
+            'user'   => auth('api')->user(),
+        ], 200);
+    }
+
+
+    /**
+     * Reusable token response
+     */
+    protected function respondWithToken($token, $message = null)
+    {
+        return response()->json([
+            'status'      => true,
+            'message'     => $message,
+            'token'       => $token,
+            'token_type'  => 'bearer',
+            'expires_in'  => auth('api')->factory()->getTTL() * 60,
+            'user'        => auth('api')->user(),
+        ], 200);
+    }
+
+
+    /**
+     * Verify Email with OTP
+     */
+    public function verifyEmail(Request $request)
     {
         $request->validate([
             'email' => 'required|email',
-            'otp' => 'required',
+            'otp'   => 'required|digits:6',
         ]);
 
-        $verify = EmailOtp::where('email', $request->email)
-            ->where('otp', $request->otp)
-            ->where('expires_at', '>=', now())
+        $email = $request->email;
+        $otp   = $request->otp;
+
+        $user = User::where('email', $email)->first();
+
+        if (!$user) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'User not found.',
+            ], 404);
+        }
+
+        // Already verified?
+        if ($user->email_verified_at) {
+            return response()->json([
+                'status'  => true,
+                'message' => 'Email already verified.',
+            ], 200);
+        }
+
+        // Get latest OTP
+        $actualOtp = EmailOtp::where('email', $email)
+            ->orderBy('created_at', 'desc')
             ->first();
 
-        if (! $verify) {
+        if (!$actualOtp || $actualOtp->otp != $otp) {
             return response()->json([
-                'message' => 'Invalid or expired OTP',
+                'status'  => false,
+                'message' => 'Invalid OTP.',
             ], 400);
         }
 
-        // Mark email as verified
-        User::where('email', $request->email)
-            ->update(['email_verified_at' => now()]);
-
-        // Delete OTP after verification
-        EmailOtp::where('email', $request->email)->delete();
-
-        return response()->json([
-            'message' => 'Email verified successfully!',
-        ]);
-    }
-
-    public function resendOtp(Request $request)
-    {
-        $request->validate([
-            'email' => 'required|email|exists:users,email',
-        ]);
-
-        // 1. Rate limit: only 1 OTP per minute
-        $recentOtp = EmailOtp::where('email', $request->email)
-            ->where('created_at', '>', now()->subMinute())
-            ->first();
-
-        if ($recentOtp) {
-            return back()->with('error', 'Please wait 1 minute before requesting a new OTP.');
+        if ($actualOtp->expires_at < now()) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'OTP has expired.',
+            ], 400);
         }
 
-        // 2. Delete previous OTPs
-        EmailOtp::where('email', $request->email)->delete();
+        // Update email verified timestamp
+        $user->update(['email_verified_at' => now()]);
 
-        // 3. Create new OTP
-        $otp = rand(100000, 999999);
-
-        EmailOtp::create([
-            'email' => $request->email,
-            'otp' => $otp,
-            'expires_at' => now()->addMinutes(10),
-        ]);
-
-        // 4. Send OTP email
-        Mail::to($request->email)->send(new SendOtp($otp));
-
-        return back()->with('success', 'A new OTP has been sent to your email.');
+        return response()->json([
+            'status'  => true,
+            'message' => 'Email verified successfully.',
+        ], 200);
     }
 }
