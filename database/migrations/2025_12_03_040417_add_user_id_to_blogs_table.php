@@ -9,11 +9,11 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-     public function up(): void
+    public function up(): void
     {
         Schema::table('blogs', function (Blueprint $table) {
             // add user_id column
-            $table->unsignedBigInteger('user_id')->after('id');
+            $table->unsignedBigInteger('user_id')->nullable()->after('id');
 
             // make it a foreign key referencing users table
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');

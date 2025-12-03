@@ -17,6 +17,8 @@ Route::view('/register', 'pages.auth.register')->name('register');
 Route::view('/verify-email', 'pages.auth.verify-email')->name('verify.email.page');
 
 Route::view('blogs','pages.blogs.index')->name('blogs.index');
+Route::view('/blogs/{slug}','pages.blogs._detail_components.blog-details')->name('blogs.detail');
+
 // BLOG ROUTES
 Route::middleware('auth:api')->group(function () {
     Route::get('/blogs/create', [BlogController::class, 'create'])->name('blogs.create');

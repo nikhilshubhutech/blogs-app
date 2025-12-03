@@ -16,7 +16,7 @@ class BlogController extends Controller
      */
     public function index()
     {
-        $blogs = Blog::with('category')->orderBy('created_at', 'desc')->paginate(12);
+        $blogs = Blog::with('category','user')->orderBy('created_at', 'desc')->paginate(12);
 
         return response()->json([
             'status' => true,
@@ -27,15 +27,15 @@ class BlogController extends Controller
     /**
      * Show the form for creating a new blog.
      */
-    public function create()
-    {
-        $categories = BlogCategory::all();
+    // public function create()
+    // {
+    //     $categories = BlogCategory::all();
 
-        return view('pages.blogs._partials.form', [
-            'categories' => $categories,
-            'blog' => null,
-        ]);
-    }
+    //     return view('pages.blogs._partials.form', [
+    //         'categories' => $categories,
+    //         'blog' => null,
+    //     ]);
+    // }
 
     /**
      * Store new blog post.
@@ -53,7 +53,7 @@ class BlogController extends Controller
         $categories = BlogCategory::all();
         $blog = Blog::where('slug', $slug)->firstOrFail();
 
-        return view('pages.blogs._partials.form', [
+        return view('pages.blogs._detail_components.form', [
             'categories' => $categories,
             'blog' => $blog,
         ]);
@@ -137,7 +137,7 @@ class BlogController extends Controller
      */
     public function show($slug)
     {
-        $blog = Blog::with('category')->where('slug', $slug)->first();
+        $blog = Blog::with('category','user')->where('slug', $slug)->first();
 
         if (! $blog) {
             return response()->json([
