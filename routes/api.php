@@ -14,8 +14,13 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::post('/refresh', [AuthController::class, 'refresh']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/blogs', [BlogController::class, 'store'])->name('api.blogs.store');
+    Route::put('/blogs/{id}', [BlogController::class, 'update'])->name('api.blogs.update');
+    Route::delete('/blogs/{slug}', [BlogController::class, 'destroy'])->name('api.blogs.destroy');
 });
 
+Route::get('/blogs/{slug}', [BlogController::class, 'show'])->name('api.blogs.show');
+Route::get('/blogs', [BlogController::class, 'index'])->name('api.blogs.index');
 
 
 // Route::middleware('auth:api')->group(function () {
@@ -26,8 +31,4 @@ Route::middleware('auth:api')->group(function () {
 //     Route::delete('/blogs/{slug}', [BlogController::class, 'destroy'])->name('api.blogs.destroy');
 // });
 
-    Route::get('/blogs', [BlogController::class, 'index'])->name('api.blogs.index');
-    Route::get('/blogs/{slug}', [BlogController::class, 'show'])->name('api.blogs.show');
-    Route::post('/blogs', [BlogController::class, 'store'])->name('api.blogs.store');
-    Route::put('/blogs/{id}', [BlogController::class, 'update'])->name('api.blogs.update');
-    Route::delete('/blogs/{slug}', [BlogController::class, 'destroy'])->name('api.blogs.destroy');
+    

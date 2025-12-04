@@ -14,56 +14,44 @@
 
 
 
-    <script>
-        document.addEventListener("DOMContentLoaded", async () => {
-            const token = localStorage.getItem("token");
-            if (!token) {
-                window.location.href = "{{ route('login') }}"
-            }
-            let parts = window.location.pathname.split("/").filter(Boolean);
-            const slug = parts[parts.length - 1];
+<script>
+    document.addEventListener("DOMContentLoaded", async () => {
+        let parts = window.location.pathname.split("/").filter(Boolean);
+        const slug = parts[parts.length - 1];
+        const userId = localStorage.getItem('userId')
+        const blogContainer = document.getElementById("blog-container");
+        const loading = document.getElementById("loading");
+        const error = document.getElementById("error");
+        try {
+            // JWT for API
 
-            const blogContainer = document.getElementById("blog-container");
-            const loading = document.getElementById("loading");
-            const error = document.getElementById("error");
-            console.log(slug)
-            try {
-                // JWT for API
-
-                const response = await fetch(`/api/blogs/${slug}`, {
-                    method: "GET"
+            const response = await fetch(`/api/blogs/${slug}`, {
+                method: "GET",
                 headers: {
-                        "Authorization": token ? `Bearer ${token}` : "",
-                        "Accept": "application/json"
-                    }
-                });
-                if (response) {
-                    console.log("yes");
+                    "Authorization": token ? `Bearer ${token}` : "",
+                    "Accept": "application/json"
                 }
-                const result = await response.json();
-                console.log(result)
+            });
+            const result = await response.json();
+            loading.classList.add("hidden");
 
-                loading.classList.add("hidden");
+            if (!result.status) {
+                error.textContent = "Blog post not found.";
+                error.classList.remove("hidden");
+                return;
+            }
 
-                if (!result.status) {
-                    error.textContent = "Blog post not found.";
-                    error.classList.remove("hidden");
-                    return;
-                }
-
-                const blog = result.data;
-                console.log(blog)
-                blogContainer.classList.remove("hidden");
-
-                blogContainer.innerHTML = `
+            const blog = result.data;
+            blogContainer.classList.remove("hidden");
+            blogContainer.innerHTML = `
                 <div class="flex items-center justify-between text-sm text-gray-500 mb-2">
                     <span class="font-semibold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-wider">
                         ${blog.category?.name ?? 'Uncategorized'}
                     </span>
                     <span>
                         Published on: ${new Date(blog.published_at).toLocaleDateString('en-US', {
-                    month: 'short', day: '2-digit', year: 'numeric'
-                })}
+                month: 'short', day: '2-digit', year: 'numeric'
+            })}
                     </span>
                 </div>
 
@@ -73,7 +61,7 @@
                     </h1>
 
                     <div class="w-1/4 py-1.5 flex justify-end gap-3 mb-6">
-                        <a href="/blogs/${blog.slug}/edit"
+                        ${blog.user_id == userId ? `<a href="/blogs/${blog.slug}/edit"
                             class="px-4 py-2 text-gray-700 text-sm hover:text-blue-700">
                             ✏️ Edit
                         </a>
@@ -83,6 +71,10 @@
                                 🗑️ Delete
                             </button>
                         </form>
+                        `: ""}
+
+
+                        
                     </div>
                 </div>
 
@@ -117,35 +109,36 @@
                     </div>
                 ` : ""}
             `;
+            const deleteForm = document.getElementById("deleteForm")
 
-                // DELETE HANDLER
-                document.getElementById("deleteForm").addEventListener("submit", async (e) => {
+            // DELETE HANDLER
+            if (deleteForm) {
+                deleteForm.addEventListener("submit", async (e) => {
                     e.preventDefault();
 
                     if (!confirm("Are you sure you want to delete this blog permanently?")) return;
-
                     const deleteResponse = await fetch(`/api/blogs/${slug}`, {
                         method: "DELETE",
                         headers: {
                             "Authorization": `Bearer ${token}`,
+                            "Content-Type": "application/json",
                             "Accept": "application/json"
                         }
                     });
-
                     const deleteResult = await deleteResponse.json();
-
                     if (deleteResult.status) {
-                        alert("Blog deleted successfully!");
+                        sessionStorage.setItem('successMessage', "Blog deleted successfully.");
                         window.location.href = "/blogs";
                     }
                 });
-
-            } catch (e) {
-                console.log("Error:", e)
-                loading.classList.add("hidden");
-                error.textContent = "Something went wrong while loading the blog.";
-                error.classList.remove("hidden");
             }
 
-        });
-    </script>
+        } catch (e) {
+            console.log("Error:", e)
+            loading.classList.add("hidden");
+            error.textContent = "Something went wrong while loading the blog.";
+            error.classList.remove("hidden");
+        }
+
+    });
+</script>

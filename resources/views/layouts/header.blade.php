@@ -26,13 +26,32 @@
                     </nav>
                 </div>
                 <div class="text-xl">
-                    <div id="navAuthenticated" style="display:none;">
-                        <a href=""></a>
-                        <a href="#" onclick="logout()">Logout</a>
+                    <div id="navAuthenticated" class="relative" style="display:none;">
+                        <!-- Profile Icon -->
+                        <button id="profileBtn" class="flex items-center focus:outline-none">
+
+                        </button>
+
+                        <!-- Dropdown Menu -->
+                        <div id="profileDropdown"
+                            class="hidden absolute right-0 mt-3 w-48 bg-white shadow-lg rounded-lg py-2 border">
+                            <a href="/profile" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                View Profile
+                            </a>
+                            <a href="{{ route('blogs.index') }}"
+                                class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                My Blogs
+                            </a>
+                            <button onclick="logout()"
+                                class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">
+                                Logout
+                            </button>
+                        </div>
                     </div>
+
                     <div id="navGuest" class="" style="display:none;">
                         <a class="text-left mr-10" href="{{ route('login') }}">Login</a>
-                        <a class="text-right"  href="{{ route('register') }}">Register</a>
+                        <a class="text-right" href="{{ route('register') }}">Register</a>
                     </div>
                 </div>
             </div>
@@ -41,7 +60,29 @@
 
         <script>
             const token = localStorage.getItem('token');
+            // console.log("TOKEN FROM LOCALSTORAGE:", token);
+            // let userDetail;
+            // async function fetchUser(url = '/api/me') {
+            //     try {
+            //         const response = await fetch(url, {
+            //             headers: {
+            //                 'Authorization': `Bearer ${token}`,
+            //                 'Accept': 'application/json'
+            //             }
+            //         });
+            //         const result = await response.json();
+            //         userDetail = result.user;
+            //         console.log(userDetail);
+            //     } catch (e) {
+            //         console.log(e)
+            //     }
 
+            // }
+
+            // fetchUser()
+
+            // const user = localStorage.getItem('user')
+            // console.log(user.name)
             if (token) {
                 document.getElementById('navAuthenticated').style.display = 'block';
                 document.getElementById('navGuest').style.display = 'none';
@@ -56,4 +97,23 @@
                 window.location.href = '{{ route("login") }}';
             }
 
+
+
+            const profileBtn = document.getElementById('profileBtn');
+            profileBtn.innerHTML = `<img src="https://ui-avatars.com/api/?name=user&background=4b5563&color=fff"
+                                class="w-10 h-10 rounded-full cursor-pointer">`
+            const profileDropdown = document.getElementById('profileDropdown');
+
+            if (profileBtn) {
+                profileBtn.addEventListener('click', () => {
+                    profileDropdown.classList.toggle('hidden');
+                });
+
+                // Close dropdown when clicking outside
+                document.addEventListener('click', (event) => {
+                    if (!profileBtn.contains(event.target) && !profileDropdown.contains(event.target)) {
+                        profileDropdown.classList.add('hidden');
+                    }
+                });
+            }
         </script>
