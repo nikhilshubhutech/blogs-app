@@ -61,7 +61,7 @@
 
                 if (result.status) {
                     container.innerHTML = '';
-                    result.data.data.forEach(blog => {
+                    result.data.forEach(blog => {
                         const blogCard = document.createElement('div');
                         blogCard.className = "bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition relative";
                         blogCard.innerHTML = `

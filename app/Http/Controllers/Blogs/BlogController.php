@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Blogs;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\Blogs\BlogResource;
 use App\Models\Blogs\Blog;
 use App\Models\Blogs\BlogCategory;
 use Illuminate\Http\Request;
@@ -16,13 +17,16 @@ class BlogController extends Controller
      */
     public function index()
     {
-        $blogs = Blog::with('category','user')->orderBy('created_at', 'desc')->paginate(12);
+    $blogs = Blog::with(['category', 'user'])
+        ->latest()
+        ->paginate(12);
 
-        return response()->json([
+    return BlogResource::collection($blogs)
+        ->additional([
             'status' => true,
-            'data' => $blogs,
-        ], 200);
+        ]);
     }
+
 
     /**
      * Show the form for creating a new blog.
@@ -55,7 +59,7 @@ class BlogController extends Controller
 
         return view('pages.blogs._detail_components.form', [
             'categories' => $categories,
-            'blog' => $blog,
+            'blog' => new BlogResource($blog),
         ]);
     }
 
@@ -127,7 +131,7 @@ class BlogController extends Controller
         return response()->json([
             'status' => true,
             'message' => $message,
-            'data' => $blog,
+            'data' => new BlogResource($blog),
         ], $isCreating ? 201 : 200);
 
     }
@@ -148,7 +152,7 @@ class BlogController extends Controller
 
         return response()->json([
             'status' => true,
-            'data' => $blog,
+            'data' => new BlogResource($blog),
         ], 200);
     }
 
